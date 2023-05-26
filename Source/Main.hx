@@ -1,5 +1,9 @@
 package;
 
+import lime.graphics.opengl.GLTexture;
+import lime.graphics.Image;
+import haxe.io.Bytes;
+import lime.graphics.opengl.GLVertexArrayObject;
 import lime.graphics.WebGLRenderContext;
 import lime.app.Application;
 import lime.graphics.RenderContext;
@@ -7,13 +11,20 @@ import lime.graphics.opengl.GLBuffer;
 import lime.graphics.opengl.GLProgram;
 import lime.graphics.opengl.GLShader;
 import lime.utils.Float32Array;
-
 import lime.utils.Int32Array;
+import imgui.ImGui;
+import imgui.ImGui.ImDrawData;
+import Kha;
 
-/**
- * A simple triangle demo after Learn OpenGL (ch 5) by Joey DeVries
- */
 class Main extends Application {
+	private static var maxBufferSize:Int = 10000;
+	// private static var pipeline:PipelineState;
+	// private static var texunit:TextureUnit;
+	private static var imguiTexture:Image;
+	private static var structure:VertexStructure;
+	private static var vtx:VertexBuffer;
+	private static var idx:IndexBuffer;
+
 	// Model data
 	var vbo:GLBuffer;
 	var ebo:GLBuffer;
@@ -21,6 +32,8 @@ class Main extends Application {
 
 	// Make sure you only do initialization once
 	var initialized:Bool;
+	var gl:WebGLRenderContext;
+	var texture:GLTexture;
 
 	public function new() {
 		super();
@@ -84,85 +97,181 @@ class Main extends Application {
 	}
 
 	function initialize(gl:WebGLRenderContext):Void {
+		this.gl = gl;
+
+		/*
+			shader code as used in kha example https://github.com/jeremyfa/imgui-hx/tree/master/test/kha/Sources/Shaders 
+		 */
+
 		// Vertex Shader
-		var vs = "#version 300 es
-layout (location = 0) in vec3 aPos;
-void main()
-{
-	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+		var vs = "
+#version 300 es
+
+in vec3 pos;
+in vec4 col;
+in vec2 tex;
+out vec4 fragmentColor;
+out vec2 texcoord;
+
+void main() {
+	gl_Position = vec4(pos.x, pos.y, 0.5, 1.0);
+	fragmentColor = col;
+	texcoord = tex;
 }
 ";
 
 		// Fragment Shader
-		var fs = "#version 300 es
-precision mediump float;
+		var fs = "
+#version 300 es
+
+in vec4 fragmentColor;
+in vec2 texcoord;
 out vec4 FragColor;
-void main() 
-{
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+uniform sampler2D texsampler;
+
+void main() {
+	vec4 color = texture(texsampler, texcoord);
+	FragColor = vec4(fragmentColor.r, fragmentColor.g, fragmentColor.b, fragmentColor.a * color.a);
 }
 ";
-
 		program = glCreateProgram(gl, vs, fs);
 
-		// Vertices
-		var vertices = [
-			 0.5,  0.5, 0.0,
-			 0.5, -0.5, 0.0,
-			-0.5, -0.5, 0.0,
-			-0.5,  0.5, 0.0
-		];
-
-		// Indices
-		var indices = [
-			0, 1, 3,
-			1, 2, 3
-		];
-
-		var vertexData = new Float32Array(vertices);
-		var indicesData = new Int32Array(indices);
-
-		// create the vbo and ebo buffers
 		vbo = gl.createBuffer();
 		ebo = gl.createBuffer();
+		texture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, texture);
 
-		// vbo
-		gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-		gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+		// config mipmap and other options
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
-		// ebo
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indicesData, gl.STATIC_DRAW);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+		ImGui.createContext();
 
 		initialized = true;
 	}
 
 	public override function render(context:RenderContext):Void {
-		switch (context.type) {
-			case OPENGL, OPENGLES, WEBGL:
-				var gl = context.webgl;
+		ImGui.newFrame();
+		ImGui.begin('test');
+		ImGui.button("clicky");
+		ImGui.end();
+		ImGui.showDemoWindow();
+		ImGui.endFrame();
+		ImGui.render();
+		renderDrawList(ImGui.getDrawData());
+	}
 
-				if (!initialized) {
-					initialize(gl);
+	var bufferCount = 0;
+	var vertexStride = 8;
+
+	private static function setVertexColor(vBuf:Float32Array, col:Int, startIdx:Int):Void {
+		vBuf[startIdx + 0] = ((col >> 0) & 0xFF) / 255;
+		vBuf[startIdx + 1] = ((col >> 8) & 0xFF) / 255;
+		vBuf[startIdx + 2] = ((col >> 16) & 0xFF) / 255;
+		vBuf[startIdx + 3] = ((col >> 24) & 0xFF) / 255;
+	}
+
+	function renderDrawList(drawData:ImDrawData) {
+		var invHalfWW = 1.0 / (window.width * .5);
+		var invHalfWH = 1.0 / (window.height * .5);
+		bufferCount = 0;
+		for (i in 0...drawData.cmdListsCount) {
+			var idxOffset = 0;
+			var cmdList = drawData.cmdLists[i];
+			var cmdBuffer = cmdList.cmdBuffer.data;
+			var vtxBuffer = cmdList.vtxBuffer.data;
+			var idxBuffer = cmdList.idxBuffer.data;
+
+			for (j in 0...cmdList.cmdBuffer.size()) {
+				var cmd = cmdBuffer[j];
+				var it = Std.int(cmd.elemCount / 3);
+
+				if (cmd.elemCount > maxBufferSize) {
+					// todo?
+					// vtx.delete();
+					// idx.delete();
+					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage);
+					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage);
+					maxBufferSize = cmd.elemCount;
 				}
 
-				gl.clearColor(0.75, 1, 0, 1);
-				gl.clear(gl.COLOR_BUFFER_BIT);
+				// this is kha stuff, eventually will be migrated to our code
+				var v = vtx.lock();
+				var ii = idx.lock();
 
+				for (tri in 0...it) {
+					var baseIdx = idxOffset + (tri * 3);
+					var idx1 = idxBuffer[baseIdx + 0];
+					var idx2 = idxBuffer[baseIdx + 1];
+					var idx3 = idxBuffer[baseIdx + 2];
+					var vtx1 = vtxBuffer[idx1];
+					var vtx2 = vtxBuffer[idx2];
+					var vtx3 = vtxBuffer[idx3];
+					var tmul = tri * 27;
+					v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
+					v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
+					v[tmul + 2] = 0.5; // Vertex coord
+					setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
+
+					v[tmul + 7] = vtx1.uv.x;
+					v[tmul + 8] = vtx1.uv.y; // Texture UV coord
+					v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
+					v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
+					v[tmul + 11] = 0.5;
+					setVertexColor(v, vtx2.col, tmul + 12);
+
+					v[tmul + 16] = vtx2.uv.x;
+					v[tmul + 17] = vtx2.uv.y;
+					v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
+					v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
+					v[tmul + 20] = 0.5;
+					setVertexColor(v, vtx3.col, tmul + 21);
+
+					v[tmul + 25] = vtx3.uv.x;
+					v[tmul + 26] = vtx3.uv.y;
+
+					ii[tri * 3 + 0] = tri * 3 + 0;
+					ii[tri * 3 + 1] = tri * 3 + 1;
+					ii[tri * 3 + 2] = tri * 3 + 2;
+				}
+
+				// this is kha stuff, eventually will be migrated to our code (may not need this even)
+				vtx.unlock();
+				idx.unlock();
+
+				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
+				// most likely wrong
+				// _g4.begin();
+				// _g4.setPipeline(pipeline);
+				gl.clearColor(0.0, 0.0, 0.0, 1.0);
+				gl.clear(gl.COLOR_BUFFER_BIT);
 				gl.useProgram(program);
 
-				// Bind vertex buffer
-				gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+				// _g4.setTexture(texunit, tex.ref);
+				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, image.width, image.height, 0, gl.RGB, gl.UNSIGNED_BYTE, image.src);
 
+				// _g4.setVertexBuffer(vtx);
+				// _g4.setIndexBuffer(idx);
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo); // todo get vbo from vtx
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo); // todo get ebo from idx
+
+				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
+				
+				// _g4.drawIndexedVertices(0, cmd.elemCount);
 				gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
 				gl.enableVertexAttribArray(0);
-
 				gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
+				
 
-			default:
+
+				// _g4.end();
+
+				idxOffset += cmd.elemCount;
+			}
 		}
 	}
 }
