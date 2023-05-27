@@ -24,6 +24,8 @@ class Main extends Application {
 	private static var structure:VertexStructure;
 	private static var vtx:VertexBuffer;
 	private static var idx:IndexBuffer;
+	private static var verticesArray:Array<Float>;
+	private static var indicesArray:Array<Float>;
 
 	// Model data
 	var vbo:GLBuffer;
@@ -105,7 +107,7 @@ class Main extends Application {
 
 		// Vertex Shader
 		var vs = "
-			#version 300 es
+			#version 310 es
 
 			precision mediump float;
 
@@ -125,7 +127,7 @@ class Main extends Application {
 
 		// Fragment Shader
 		var fs = "
-			#version 300 es
+			#version 310 es
 
 			precision mediump float;
 
@@ -203,7 +205,7 @@ class Main extends Application {
 			var cmdList = drawData.cmdLists[i];
 			var cmdBuffer = cmdList.cmdBuffer.data;
 
-			// ah ok so I need to use these vbos/ebos in the vertex/index buffer classes
+			// vertex and index buffers we're going to grab our vertices/indices data from to push into our vertices and indices arrays
 			var vtxBuffer = cmdList.vtxBuffer.data;
 			var idxBuffer = cmdList.idxBuffer.data;
 
@@ -215,13 +217,15 @@ class Main extends Application {
 					// todo?
 					// vtx.delete();
 					// idx.delete();
-					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT);
-					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+
+					// create new vbo and ebo buffers
+					vtx = new VertexBuffer(cmd.elemCount, structure, gl.STATIC_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+					idx = new IndexBuffer(cmd.elemCount, gl.STATIC_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+
 					maxBufferSize = cmd.elemCount;
 				}
 
 				for (tri in 0...it) {
-					// these are single vertices
 					var baseIdx = idxOffset + (tri * 3);
 
 					// single indices

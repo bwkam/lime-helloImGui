@@ -3,7 +3,6 @@ package;
 import lime.utils.Float32Array;
 import lime.graphics.opengl.GLBuffer;
 import lime.graphics.WebGLRenderContext;
-import lime.graphics.WebGLRenderContext;
 
 @:enum abstract Usage(Int) to Int {
 	var StaticUsage = 0;
