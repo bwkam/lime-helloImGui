@@ -202,19 +202,20 @@ void main() {
 					maxBufferSize = cmd.elemCount;
 				}
 
-				// this is kha stuff, eventually will be migrated to our code
-				// var v = vtx.lock();
-				// var ii = idx.lock();
-
 				for (tri in 0...it) {
 					// these are single vertices
 					var baseIdx = idxOffset + (tri * 3);
+
+					// single indices
 					var idx1 = idxBuffer[baseIdx + 0];
 					var idx2 = idxBuffer[baseIdx + 1];
 					var idx3 = idxBuffer[baseIdx + 2];
+
+					// single vertices
 					var vtx1 = vtxBuffer[idx1];
 					var vtx2 = vtxBuffer[idx2];
 					var vtx3 = vtxBuffer[idx3];
+
 					var tmul = tri * 27;
 					v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
 					v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
@@ -243,10 +244,6 @@ void main() {
 					ii[tri * 3 + 2] = tri * 3 + 2;
 				}
 
-				// this is kha stuff, eventually will be migrated to our code (may not need this even)
-				// vtx.unlock();
-				// idx.unlock();
-
 				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
 				// most likely wrong
 				// _g4.begin();
@@ -262,6 +259,9 @@ void main() {
 				// _g4.setIndexBuffer(idx);
 				vtx.bind_buf();
 				idx.bind_buf();
+
+				vtx.buf_data();
+				idx.buf_data();
 
 				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
 
