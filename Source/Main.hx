@@ -105,41 +105,43 @@ class Main extends Application {
 
 		// Vertex Shader
 		var vs = "
-#version 300 es
+			#version 300 es
 
-layout (location = 0) in vec3 pos;
-layout (location = 1) in vec4 col;
-layout (location = 2) in vec2 tex;
+			precision mediump float;
 
-out vec4 fragmentColor;
-out vec2 texcoord;
+			layout (location = 0) in vec3 pos;
+			layout (location = 1) in vec4 col;
+			layout (location = 2) in vec2 tex;
 
-void main() {
-	gl_Position = vec4(pos.x, pos.y, 0.5, 1.0);
-	fragmentColor = col;
-	texcoord = tex;
-}
+			out vec4 fragmentColor;
+			out vec2 texcoord;
+
+			void main() {
+				gl_Position = vec4(pos.x, pos.y, 0.5, 1.0);
+				fragmentColor = col;
+				texcoord = tex;
+			}
 ";
 
 		// Fragment Shader
 		var fs = "
-#version 300 es
+			#version 300 es
 
-in vec4 fragmentColor;
-in vec2 texcoord;
-out vec4 FragColor;
-uniform sampler2D texsampler;
+			precision mediump float;
 
-void main() {
-	vec4 color = texture(texsampler, texcoord);
-	FragColor = vec4(fragmentColor.r, fragmentColor.g, fragmentColor.b, fragmentColor.a * color.a);
-}
+			in vec4 fragmentColor;
+			in vec2 texcoord;
+			out vec4 FragColor;
+			uniform sampler2D texsampler;
+
+			void main() {
+				vec4 color = texture(texsampler, texcoord);
+				FragColor = vec4(fragmentColor.r, fragmentColor.g, fragmentColor.b, fragmentColor.a * color.a);
+			}
 ";
 
 		program = glCreateProgram(gl, vs, fs);
 
-		vbo = gl.createBuffer();
-		ebo = gl.createBuffer();
 		texture = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -156,14 +158,30 @@ void main() {
 	}
 
 	public override function render(context:RenderContext):Void {
-		ImGui.newFrame();
-		ImGui.begin('test');
-		ImGui.button("clicky");
-		ImGui.end();
-		ImGui.showDemoWindow();
-		ImGui.endFrame();
-		ImGui.render();
-		renderDrawList(ImGui.getDrawData());
+		switch (context.type) {
+			case WEBGL, OPENGLES, OPENGL:
+				{
+					var gl = context.webgl;
+
+					if (!initialized) {
+						initialize(gl);
+					}
+
+					gl.clearColor(0.0, 0.0, 0.0, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT);
+					gl.useProgram(program);
+
+					ImGui.newFrame();
+					ImGui.begin('test');
+					ImGui.button("clicky");
+					ImGui.end();
+					ImGui.showDemoWindow();
+					ImGui.endFrame();
+					ImGui.render();
+					renderDrawList(ImGui.getDrawData());
+				}
+			default:
+		}
 	}
 
 	var bufferCount = 0;
@@ -197,8 +215,8 @@ void main() {
 					// todo?
 					// vtx.delete();
 					// idx.delete();
-					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT, vtxBuffer);
-					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT, idxBuffer);
+					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT);
 					maxBufferSize = cmd.elemCount;
 				}
 
@@ -216,59 +234,60 @@ void main() {
 					var vtx2 = vtxBuffer[idx2];
 					var vtx3 = vtxBuffer[idx3];
 
-					var tmul = tri * 27;
-					v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
-					v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
-					v[tmul + 2] = 0.5; // Vertex coord
-					setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
+					trace("vertex 1: " + vtx1);
+					trace("vertex 1: " + vtx2);
+					trace("vertex 1: " + vtx3);
 
-					v[tmul + 7] = vtx1.uv.x;
-					v[tmul + 8] = vtx1.uv.y; // Texture UV coord
-					v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
-					v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
-					v[tmul + 11] = 0.5;
-					setVertexColor(v, vtx2.col, tmul + 12);
+					// var tmul = tri * 27;
+					// v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
+					// v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
+					// v[tmul + 2] = 0.5; // Vertex coord
+					// setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
 
-					v[tmul + 16] = vtx2.uv.x;
-					v[tmul + 17] = vtx2.uv.y;
-					v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
-					v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
-					v[tmul + 20] = 0.5;
-					setVertexColor(v, vtx3.col, tmul + 21);
+					// v[tmul + 7] = vtx1.uv.x;
+					// v[tmul + 8] = vtx1.uv.y; // Texture UV coord
+					// v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
+					// v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
+					// v[tmul + 11] = 0.5;
+					// setVertexColor(v, vtx2.col, tmul + 12);
 
-					v[tmul + 25] = vtx3.uv.x;
-					v[tmul + 26] = vtx3.uv.y;
+					// v[tmul + 16] = vtx2.uv.x;
+					// v[tmul + 17] = vtx2.uv.y;
+					// v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
+					// v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
+					// v[tmul + 20] = 0.5;
+					// setVertexColor(v, vtx3.col, tmul + 21);
 
-					ii[tri * 3 + 0] = tri * 3 + 0;
-					ii[tri * 3 + 1] = tri * 3 + 1;
-					ii[tri * 3 + 2] = tri * 3 + 2;
+					// v[tmul + 25] = vtx3.uv.x;
+					// v[tmul + 26] = vtx3.uv.y;
+
+					// ii[tri * 3 + 0] = tri * 3 + 0;
+					// ii[tri * 3 + 1] = tri * 3 + 1;
+					// ii[tri * 3 + 2] = tri * 3 + 2;
 				}
 
 				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
 				// most likely wrong
 				// _g4.begin();
 				// _g4.setPipeline(pipeline);
-				gl.clearColor(0.0, 0.0, 0.0, 1.0);
-				gl.clear(gl.COLOR_BUFFER_BIT);
-				gl.useProgram(program);
 
 				// _g4.setTexture(texunit, tex.ref);
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, image.width, image.height, 0, gl.RGB, gl.UNSIGNED_BYTE, image.src);
+				// gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, image.width, image.height, 0, gl.RGB, gl.UNSIGNED_BYTE, image.src);
 
 				// _g4.setVertexBuffer(vtx);
 				// _g4.setIndexBuffer(idx);
-				vtx.bind_buf();
-				idx.bind_buf();
+				// vtx.bind_buf();
+				// idx.bind_buf();
 
-				vtx.buf_data();
-				idx.buf_data();
+				// vtx.buf_data();
+				// idx.buf_data();
 
 				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
 
 				// _g4.drawIndexedVertices(0, cmd.elemCount);
-				gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
-				gl.enableVertexAttribArray(0);
-				gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
+				// gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+				// gl.enableVertexAttribArray(0);
+				// gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
 
 				// _g4.end();
 

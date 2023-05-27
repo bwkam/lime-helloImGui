@@ -1,7 +1,8 @@
 package;
 
+import lime.utils.Float32Array;
 import lime.graphics.opengl.GLBuffer;
-import lime.graphics.WebGL2RenderContext;
+import lime.graphics.WebGLRenderContext;
 import lime.graphics.WebGLRenderContext;
 
 @:enum abstract Usage(Int) to Int {
@@ -24,17 +25,17 @@ class Kha {
 // todo - implement the functions that are needed for the lime example
 
 class IndexBuffer {
-	private static var _gl:WebGL2RenderContext;
+	private static var _gl:WebGLRenderContext;
 	private static var _stride:Int;
 	private static var _ebo:GLBuffer;
 	private static var _indexCount:Int;
 
-	public function new(indexCount:Int, usage:Int, stride:Int, ebo:Dynamic) { // Main.hx: idxBuffer will be the `ebo` param
+	public function new(indexCount:Int, usage:Int, stride:Int) {
 		_gl = Kha._gl;
 		_stride = stride;
 		_indexCount = indexCount;
 
-		_ebo = ebo;
+		_ebo = _gl.createBuffer();
 		_gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, _ebo);
 	}
 
@@ -44,7 +45,8 @@ class IndexBuffer {
 	}
 
 	public function buf_data():Void {
-		_gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, _indexCount, _gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
+		_gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Float32Array(_indexCount),
+			_gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
 	}
 
 	public function delete():Void {
@@ -64,18 +66,18 @@ class IndexBuffer {
 // the original is extern code
 // todo - implement the functions that are needed for the lime example
 class VertexBuffer {
-	private static var _gl:WebGL2RenderContext;
+	private static var _gl:WebGLRenderContext;
 	private static var _stride:Int;
 	private static var _vbo:GLBuffer;
 	private static var _vertexCount:Int;
 
 	// this will pretty much be just a bindBuffer call
-	public function new(vertexCount:Int, structure:VertexStructure, usage:Int, stride:Int, vbo:Dynamic) { // Main.hx: vtxBuffer will be the `vbo` param
+	public function new(vertexCount:Int, structure:VertexStructure, usage:Int, stride:Int) { // Main.hx: vtxBuffer will be the `vbo` param
 		_gl = Kha._gl;
 		_stride = stride;
 		_vertexCount = vertexCount;
 
-		_vbo = vbo;
+		_vbo = _gl.createBuffer();
 		_gl.bindBuffer(_gl.ARRAY_BUFFER, _vbo);
 	}
 
@@ -84,7 +86,8 @@ class VertexBuffer {
 	}
 
 	public function buf_data():Void {
-		_gl.bufferData(_gl.ARRAY_BUFFER, _vertexCount, _gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
+		_gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(_vertexCount),
+			_gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
 	}
 
 	// binding the buffer to null is enough
