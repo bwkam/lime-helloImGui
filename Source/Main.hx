@@ -107,9 +107,10 @@ class Main extends Application {
 		var vs = "
 #version 300 es
 
-in vec3 pos;
-in vec4 col;
-in vec2 tex;
+layout (location = 0) in vec3 pos;
+layout (location = 1) in vec4 col;
+layout (location = 2) in vec2 tex;
+
 out vec4 fragmentColor;
 out vec2 texcoord;
 
@@ -134,6 +135,7 @@ void main() {
 	FragColor = vec4(fragmentColor.r, fragmentColor.g, fragmentColor.b, fragmentColor.a * color.a);
 }
 ";
+
 		program = glCreateProgram(gl, vs, fs);
 
 		vbo = gl.createBuffer();
@@ -147,7 +149,6 @@ void main() {
 
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
 
 		ImGui.createContext();
 
@@ -183,6 +184,8 @@ void main() {
 			var idxOffset = 0;
 			var cmdList = drawData.cmdLists[i];
 			var cmdBuffer = cmdList.cmdBuffer.data;
+
+			// ah ok so I need to use these vbos/ebos in the vertex/index buffer classes
 			var vtxBuffer = cmdList.vtxBuffer.data;
 			var idxBuffer = cmdList.idxBuffer.data;
 
@@ -194,16 +197,17 @@ void main() {
 					// todo?
 					// vtx.delete();
 					// idx.delete();
-					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage);
-					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage);
+					vtx = new VertexBuffer(cmd.elemCount, structure, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT, vtxBuffer);
+					idx = new IndexBuffer(cmd.elemCount, Usage.StaticUsage, vertexStride * Float32Array.BYTES_PER_ELEMENT, idxBuffer);
 					maxBufferSize = cmd.elemCount;
 				}
 
 				// this is kha stuff, eventually will be migrated to our code
-				var v = vtx.lock();
-				var ii = idx.lock();
+				// var v = vtx.lock();
+				// var ii = idx.lock();
 
 				for (tri in 0...it) {
+					// these are single vertices
 					var baseIdx = idxOffset + (tri * 3);
 					var idx1 = idxBuffer[baseIdx + 0];
 					var idx2 = idxBuffer[baseIdx + 1];
@@ -240,8 +244,8 @@ void main() {
 				}
 
 				// this is kha stuff, eventually will be migrated to our code (may not need this even)
-				vtx.unlock();
-				idx.unlock();
+				// vtx.unlock();
+				// idx.unlock();
 
 				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
 				// most likely wrong
@@ -256,17 +260,15 @@ void main() {
 
 				// _g4.setVertexBuffer(vtx);
 				// _g4.setIndexBuffer(idx);
-				gl.bindBuffer(gl.ARRAY_BUFFER, vbo); // todo get vbo from vtx
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo); // todo get ebo from idx
+				vtx.bind_buf();
+				idx.bind_buf();
 
 				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
-				
+
 				// _g4.drawIndexedVertices(0, cmd.elemCount);
 				gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
 				gl.enableVertexAttribArray(0);
 				gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
-				
-
 
 				// _g4.end();
 

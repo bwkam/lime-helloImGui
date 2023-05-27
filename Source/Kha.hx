@@ -1,7 +1,8 @@
 package;
 
-import lime.utils.UInt32Array;
-import lime.utils.Float32Array;
+import lime.graphics.opengl.GLBuffer;
+import lime.graphics.WebGL2RenderContext;
+import lime.graphics.WebGLRenderContext;
 
 @:enum abstract Usage(Int) to Int {
 	var StaticUsage = 0;
@@ -9,47 +10,95 @@ import lime.utils.Float32Array;
 	var ReadableUsage = 2;
 }
 
-// this is the empty class definition to make the source compile 
+@:allow(IndexBuffer, VertexBuffer)
+class Kha {
+	private static var _gl:WebGLRenderContext;
+
+	public function new(gl:WebGLRenderContext) {
+		_gl = gl;
+	}
+}
+
+// this is the empty class definition to make the source compile
 // the original is extern code
 // todo - implement the functions that are needed for the lime example
+
 class IndexBuffer {
-	public function new(indexCount:Int, usage:Usage, canRead:Bool = false) {}
+	private static var _gl:WebGL2RenderContext;
+	private static var _stride:Int;
+	private static var _ebo:GLBuffer;
+	private static var _indexCount:Int;
 
-	public function delete():Void {}
+	public function new(indexCount:Int, usage:Int, stride:Int, ebo:Dynamic) { // Main.hx: idxBuffer will be the `ebo` param
+		_gl = Kha._gl;
+		_stride = stride;
+		_indexCount = indexCount;
 
-	public function lock(?start:Int, ?count:Int):UInt32Array {
-		return new UInt32Array();
+		_ebo = ebo;
+		_gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, _ebo);
 	}
 
-	public function unlock(?count:Int):Void {}
+	// idk some helper funcs I think will prob need
+	public function bind_buf():Void {
+		_gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, _ebo);
+	}
 
+	public function buf_data():Void {
+		_gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, _indexCount, _gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
+	}
+
+	public function delete():Void {
+		_gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, null);
+	}
+
+	// I don't think we can easily set vertex data like this lol
 	public function set():Void {}
 
+	// still no idea counts of what
 	public function count():Int {
 		return 0;
 	}
 }
 
-// this is the empty class definition to make the source compile 
+// this is the empty class definition to make the source compile
 // the original is extern code
 // todo - implement the functions that are needed for the lime example
 class VertexBuffer {
-	public function new(vertexCount:Int, structure:VertexStructure, usage:Usage, instanceDataStepRate:Int = 0, canRead:Bool = false){}
+	private static var _gl:WebGL2RenderContext;
+	private static var _stride:Int;
+	private static var _vbo:GLBuffer;
+	private static var _vertexCount:Int;
 
-	public function delete():Void{}
+	// this will pretty much be just a bindBuffer call
+	public function new(vertexCount:Int, structure:VertexStructure, usage:Int, stride:Int, vbo:Dynamic) { // Main.hx: vtxBuffer will be the `vbo` param
+		_gl = Kha._gl;
+		_stride = stride;
+		_vertexCount = vertexCount;
 
-	public function lock(?start:Int, ?count:Int):Float32Array{
-		return new Float32Array();
+		_vbo = vbo;
+		_gl.bindBuffer(_gl.ARRAY_BUFFER, _vbo);
 	}
 
-	public function unlock(?count:Int):Void{}
+	public function bind_buf():Void {
+		_gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, _vbo);
+	}
 
-	public function count():Int{
+	public function buf_data():Void {
+		_gl.bufferData(_gl.ARRAY_BUFFER, _vertexCount, _gl.STREAM_DRAW); // I chose STREAM_DRAW because that was in the original cpp, but im not sure
+	}
+
+	// binding the buffer to null is enough
+	public function delete():Void {
+		_gl.bindBuffer(_gl.ARRAY_BUFFER, null);
+	}
+
+	// count of what?
+	public function count():Int {
 		return 0;
 	}
 
-	public function stride():Int{
-		return 0;
+	public function stride():Int {
+		return _stride;
 	}
 }
 
@@ -156,6 +205,8 @@ class VertexElement {
 	}
 }
 
+// not sure, but I think that's just something to manipulate the vertex attribs of a shader, done in lime by gl.vertexAttrib* calls
+// vertex attribs like col, tex, pos (look at the original Kha sample)
 class VertexStructure {
 	public var elements:Array<VertexElement>;
 	public var instanced:Bool;
@@ -165,6 +216,7 @@ class VertexStructure {
 		instanced = false;
 	}
 
+	// ok, so looks like vertex elem is just a vertex attrib
 	public function add(name:String, data:VertexData) {
 		elements.push(new VertexElement(name, data));
 	}
