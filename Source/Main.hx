@@ -107,7 +107,7 @@ class Main extends Application {
 
 		// Vertex Shader
 		var vs = "
-			#version 310 es
+			#version 300 es
 
 			precision mediump float;
 
@@ -127,7 +127,7 @@ class Main extends Application {
 
 		// Fragment Shader
 		var fs = "
-			#version 310 es
+			#version 300 es
 
 			precision mediump float;
 
