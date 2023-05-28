@@ -236,6 +236,7 @@ class Main extends Application {
 					var vtx2 = vtxBuffer[idx2];
 					var vtx3 = vtxBuffer[idx3];
 
+					// I really don't know why 27 but still need to trace these values
 					var tmul = tri * 27;
 
 					// first vertex
