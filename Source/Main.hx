@@ -24,8 +24,9 @@ class Main extends Application {
 	private static var structure:VertexStructure;
 	private static var vtx:VertexBuffer;
 	private static var idx:IndexBuffer;
-	private static var verticesArray:Array<Float>;
-	private static var indicesArray:Array<Float>;
+
+	private static var v:Array<Float>;
+	private static var ii:Array<Float>;
 
 	// Model data
 	var vbo:GLBuffer;
@@ -189,7 +190,7 @@ class Main extends Application {
 	var bufferCount = 0;
 	var vertexStride = 8;
 
-	private static function setVertexColor(vBuf:Float32Array, col:Int, startIdx:Int):Void {
+	private static function setVertexColor(vBuf:Array<Float>, col:Int, startIdx:Int):Void {
 		vBuf[startIdx + 0] = ((col >> 0) & 0xFF) / 255;
 		vBuf[startIdx + 1] = ((col >> 8) & 0xFF) / 255;
 		vBuf[startIdx + 2] = ((col >> 16) & 0xFF) / 255;
@@ -205,7 +206,6 @@ class Main extends Application {
 			var cmdList = drawData.cmdLists[i];
 			var cmdBuffer = cmdList.cmdBuffer.data;
 
-			// vertex and index buffers we're going to grab our vertices/indices data from to push into our vertices and indices arrays
 			var vtxBuffer = cmdList.vtxBuffer.data;
 			var idxBuffer = cmdList.idxBuffer.data;
 
@@ -214,13 +214,12 @@ class Main extends Application {
 				var it = Std.int(cmd.elemCount / 3);
 
 				if (cmd.elemCount > maxBufferSize) {
-					// todo?
-					// vtx.delete();
-					// idx.delete();
+					vtx.delete();
+					idx.delete();
 
-					// create new vbo and ebo buffers
-					vtx = new VertexBuffer(cmd.elemCount, structure, gl.STATIC_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
-					idx = new IndexBuffer(cmd.elemCount, gl.STATIC_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+					// create/bind new vbo and ebo buffers
+					vtx = new VertexBuffer(cmd.elemCount, structure, gl.STREAM_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
+					idx = new IndexBuffer(cmd.elemCount, gl.STREAM_DRAW, vertexStride * Float32Array.BYTES_PER_ELEMENT);
 
 					maxBufferSize = cmd.elemCount;
 				}
@@ -238,36 +237,32 @@ class Main extends Application {
 					var vtx2 = vtxBuffer[idx2];
 					var vtx3 = vtxBuffer[idx3];
 
-					trace("vertex 1: " + vtx1);
-					trace("vertex 1: " + vtx2);
-					trace("vertex 1: " + vtx3);
+					var tmul = tri * 27;
+					v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
+					v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
+					v[tmul + 2] = 0.5; // Vertex coord
+					setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
 
-					// var tmul = tri * 27;
-					// v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
-					// v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
-					// v[tmul + 2] = 0.5; // Vertex coord
-					// setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
+					v[tmul + 7] = vtx1.uv.x;
+					v[tmul + 8] = vtx1.uv.y; // Texture UV coord
+					v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
+					v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
+					v[tmul + 11] = 0.5;
+					setVertexColor(v, vtx2.col, tmul + 12);
 
-					// v[tmul + 7] = vtx1.uv.x;
-					// v[tmul + 8] = vtx1.uv.y; // Texture UV coord
-					// v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
-					// v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
-					// v[tmul + 11] = 0.5;
-					// setVertexColor(v, vtx2.col, tmul + 12);
+					v[tmul + 16] = vtx2.uv.x;
+					v[tmul + 17] = vtx2.uv.y;
+					v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
+					v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
+					v[tmul + 20] = 0.5;
+					setVertexColor(v, vtx3.col, tmul + 21);
 
-					// v[tmul + 16] = vtx2.uv.x;
-					// v[tmul + 17] = vtx2.uv.y;
-					// v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
-					// v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
-					// v[tmul + 20] = 0.5;
-					// setVertexColor(v, vtx3.col, tmul + 21);
+					v[tmul + 25] = vtx3.uv.x;
+					v[tmul + 26] = vtx3.uv.y;
 
-					// v[tmul + 25] = vtx3.uv.x;
-					// v[tmul + 26] = vtx3.uv.y;
-
-					// ii[tri * 3 + 0] = tri * 3 + 0;
-					// ii[tri * 3 + 1] = tri * 3 + 1;
-					// ii[tri * 3 + 2] = tri * 3 + 2;
+					ii[tri * 3 + 0] = tri * 3 + 0;
+					ii[tri * 3 + 1] = tri * 3 + 1;
+					ii[tri * 3 + 2] = tri * 3 + 2;
 				}
 
 				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
@@ -278,20 +273,30 @@ class Main extends Application {
 				// _g4.setTexture(texunit, tex.ref);
 				// gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, image.width, image.height, 0, gl.RGB, gl.UNSIGNED_BYTE, image.src);
 
-				// _g4.setVertexBuffer(vtx);
-				// _g4.setIndexBuffer(idx);
-				// vtx.bind_buf();
-				// idx.bind_buf();
-
-				// vtx.buf_data();
-				// idx.buf_data();
+				// just to be sure
+				vtx.bind_buf();
+				idx.bind_buf();
+				vtx.buf_data();
+				idx.buf_data();
 
 				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
 
 				// _g4.drawIndexedVertices(0, cmd.elemCount);
-				// gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
-				// gl.enableVertexAttribArray(0);
-				// gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
+
+				// pos
+				gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 8 * Float32Array.BYTES_PER_ELEMENT, 0);
+				gl.enableVertexAttribArray(0);
+
+				// col
+				gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 8 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
+				gl.enableVertexAttribArray(1);
+
+				// tex
+				gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 8 * Float32Array.BYTES_PER_ELEMENT, 6 * Float32Array.BYTES_PER_ELEMENT);
+				gl.enableVertexAttribArray(2);
+
+				// finally draw using our indices
+				gl.drawElements(gl.TRIANGLES, cmd.elemCount, gl.UNSIGNED_INT, 0);
 
 				// _g4.end();
 
