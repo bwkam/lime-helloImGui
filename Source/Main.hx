@@ -235,28 +235,32 @@ class Main extends Application {
 					var vtx3 = vtxBuffer[idx3];
 
 					var tmul = tri * 27;
+
+					// first vertex
 					v[tmul + 0] = vtx1.pos.x * invHalfWW - 1;
 					v[tmul + 1] = -(vtx1.pos.y * invHalfWH - 1.0);
 					v[tmul + 2] = 0.5; // Vertex coord
 					setVertexColor(v, vtx1.col, tmul + 3); // Vertex color
-
 					v[tmul + 7] = vtx1.uv.x;
 					v[tmul + 8] = vtx1.uv.y; // Texture UV coord
+
+					// second vertex
 					v[tmul + 9] = vtx2.pos.x * invHalfWW - 1;
 					v[tmul + 10] = -(vtx2.pos.y * invHalfWH - 1.0);
 					v[tmul + 11] = 0.5;
 					setVertexColor(v, vtx2.col, tmul + 12);
-
 					v[tmul + 16] = vtx2.uv.x;
 					v[tmul + 17] = vtx2.uv.y;
+
+					// third vertex
 					v[tmul + 18] = vtx3.pos.x * invHalfWW - 1;
 					v[tmul + 19] = -(vtx3.pos.y * invHalfWH - 1.0);
 					v[tmul + 20] = 0.5;
 					setVertexColor(v, vtx3.col, tmul + 21);
-
 					v[tmul + 25] = vtx3.uv.x;
 					v[tmul + 26] = vtx3.uv.y;
 
+					// indices
 					ii[tri * 3 + 0] = tri * 3 + 0;
 					ii[tri * 3 + 1] = tri * 3 + 1;
 					ii[tri * 3 + 2] = tri * 3 + 2;
@@ -268,8 +272,10 @@ class Main extends Application {
 				// gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, tex.ref.width, tex.ref.height, 0, gl.RGB, gl.UNSIGNED_BYTE, tex.ref.src);
 
 				// just to be sure
+
 				vtx.bind_buf();
 				idx.bind_buf();
+
 				vtx.buf_data();
 				idx.buf_data();
 
