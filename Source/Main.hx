@@ -221,6 +221,8 @@ class Main extends Application {
 					maxBufferSize = cmd.elemCount;
 				}
 
+				// THIS WON'T WORK, I NEED TO BE ABLE TO TRACE THE VALUES AND INSPECT HOW THEY LOOK LIKE
+
 				for (tri in 0...it) {
 					var baseIdx = idxOffset + (tri * 3);
 
