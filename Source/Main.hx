@@ -2,8 +2,6 @@ package;
 
 import lime.graphics.opengl.GLTexture;
 import lime.graphics.Image;
-import haxe.io.Bytes;
-import lime.graphics.opengl.GLVertexArrayObject;
 import lime.graphics.WebGLRenderContext;
 import lime.app.Application;
 import lime.graphics.RenderContext;
@@ -11,7 +9,6 @@ import lime.graphics.opengl.GLBuffer;
 import lime.graphics.opengl.GLProgram;
 import lime.graphics.opengl.GLShader;
 import lime.utils.Float32Array;
-import lime.utils.Int32Array;
 import imgui.ImGui;
 import imgui.ImGui.ImDrawData;
 import Kha;
@@ -171,7 +168,7 @@ class Main extends Application {
 					}
 
 					gl.clearColor(0.0, 0.0, 0.0, 1.0);
-					gl.clear(gl.COLOR_BUFFER_BIT);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.SCISSOR_TEST);
 					gl.useProgram(program);
 
 					ImGui.newFrame();
@@ -265,13 +262,10 @@ class Main extends Application {
 					ii[tri * 3 + 2] = tri * 3 + 2;
 				}
 
-				// following lines are replicating https://github.com/jeremyfa/imgui-hx/blob/9beef7f886b4c72100711bb039bbb6bc1674556f/test/kha/Sources/ImGuiDemo.hx#L294
-				// most likely wrong
-				// _g4.begin();
-				// _g4.setPipeline(pipeline);
+				// TODO: FIX THIS, for some reason, `cmd.textureID` is not defined.
 
-				// _g4.setTexture(texunit, tex.ref);
-				// gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, image.width, image.height, 0, gl.RGB, gl.UNSIGNED_BYTE, image.src);
+				// var tex:cpp.Pointer<Image> = cpp.Pointer.fromRaw(cmd.textureID).reinterpret();
+				// gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, tex.ref.width, tex.ref.height, 0, gl.RGB, gl.UNSIGNED_BYTE, tex.ref.src);
 
 				// just to be sure
 				vtx.bind_buf();
@@ -279,9 +273,9 @@ class Main extends Application {
 				vtx.buf_data();
 				idx.buf_data();
 
-				// _g4.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x), Std.int(cmd.clipRect.w - cmd.clipRect.y));
-
-				// _g4.drawIndexedVertices(0, cmd.elemCount);
+				// Honestly, I don't know what scissor is. But uhh...
+				gl.scissor(Std.int(cmd.clipRect.x), Std.int(cmd.clipRect.y), Std.int(cmd.clipRect.z - cmd.clipRect.x),
+					Std.int(cmd.clipRect.w - cmd.clipRect.y));
 
 				// pos
 				gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 8 * Float32Array.BYTES_PER_ELEMENT, 0);
@@ -297,8 +291,6 @@ class Main extends Application {
 
 				// finally draw using our indices
 				gl.drawElements(gl.TRIANGLES, cmd.elemCount, gl.UNSIGNED_INT, 0);
-
-				// _g4.end();
 
 				idxOffset += cmd.elemCount;
 			}

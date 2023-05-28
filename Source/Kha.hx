@@ -71,7 +71,7 @@ class VertexBuffer {
 	private static var _vertexCount:Int;
 
 	// this will pretty much be just a bindBuffer call
-	public function new(vertexCount:Int, structure:VertexStructure, usage:Int, stride:Int) { // Main.hx: vtxBuffer will be the `vbo` param
+	public function new(vertexCount:Int, structure:VertexStructure, usage:Int, stride:Int) {
 		_gl = Kha._gl;
 		_stride = stride;
 		_vertexCount = vertexCount;
