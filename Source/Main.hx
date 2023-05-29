@@ -38,6 +38,8 @@ class Main extends Application {
 	public function new() {
 		super();
 
+		trace("yo world");
+
 		initialized = false;
 	}
 
@@ -104,8 +106,7 @@ class Main extends Application {
 		 */
 
 		// Vertex Shader
-		var vs = "
-			#version 300 es
+		var vs = "#version 300 es
 
 			precision mediump float;
 
@@ -124,8 +125,7 @@ class Main extends Application {
 ";
 
 		// Fragment Shader
-		var fs = "
-			#version 300 es
+		var fs = "#version 300 es
 
 			precision mediump float;
 
@@ -154,6 +154,9 @@ class Main extends Application {
 
 		ImGui.createContext();
 
+		var io = ImGui.getIO();
+		io.displaySize = ImVec2.create(Application.current.window.width, Application.current.window.height);
+
 		initialized = true;
 	}
 
@@ -163,9 +166,13 @@ class Main extends Application {
 				{
 					var gl = context.webgl;
 
+					var kha = new Kha(gl);
+
 					if (!initialized) {
 						initialize(gl);
 					}
+
+					trace("hi from the loop");
 
 					gl.clearColor(0.0, 0.0, 0.0, 1.0);
 					gl.clear(gl.COLOR_BUFFER_BIT | gl.SCISSOR_TEST);
@@ -222,6 +229,7 @@ class Main extends Application {
 				}
 
 				// THIS WON'T WORK, I NEED TO BE ABLE TO TRACE THE VALUES AND INSPECT HOW THEY LOOK LIKE
+				// Just  for reference, I think the vertices arrau structure must look a little like:
 
 				for (tri in 0...it) {
 					var baseIdx = idxOffset + (tri * 3);
